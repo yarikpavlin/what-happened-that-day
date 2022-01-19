@@ -15,13 +15,11 @@ class Container extends React.Component<any, any> {
         this.updateIsLoading();
         const data = await FeedRepository.getRandomEvent();
         if(data.event) {
-            console.log(data);
             this.setState({
                 event: data.event,
                 typeOfEvent: data.type
             })
             this.updateIsLoading();
-            console.log(this.state.event, this.state.typeOfEvent)   
         } else {
             await this.fetchData();
             this.updateIsLoading();

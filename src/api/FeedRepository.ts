@@ -1,12 +1,14 @@
 import { getRandomNumberInRange } from '../utils/numberUtils';
 import DateUtils from './DateUtils';
 import HttpClient from './HttpClient';
+import { CacheHandler } from './Cache';
 
 class FeedRepository {
     private readonly baseUrl = 'https://api.wikimedia.org/feed/v1/wikipedia'
     private language = 'ru';
     private currentDate: string = DateUtils.getTodayDate();
     private currentMonth: string = DateUtils.getTodayMonth();
+    private cache: CacheHandler = CacheHandler.getInstance();
 
 
     setlanguage(language: string) {
@@ -14,9 +16,17 @@ class FeedRepository {
     }
 
     private async getDataByType(type: string) {
-        console.log(`Start fetch for type ${type}`);
         const url = `${this.baseUrl}/${this.language}/onthisday/${type}/${this.currentMonth}/${this.currentDate}`;
-        return await HttpClient.get(url);
+        if(!this.cache.isDataCached(type)) {
+            const fetchedData = await HttpClient.get(url);
+            this.cache.cacheData({
+                type: type,
+                data: fetchedData[type]
+            });
+            return fetchedData;
+        } else {
+            return this.cache.getDataByType(type)
+        }
     }
     
     async getBirths() {
@@ -40,23 +50,22 @@ class FeedRepository {
     }
 
    async getRandomEvent() {
-       let data = [];
+       let events = [];
        const types = ['births', 'events', 'holidays'];
        const typeIndex = getRandomNumberInRange(0,2);
        const type = types[typeIndex];
        switch(type) {
             case types[0]:
-                data = await this.getBirths();
+                events = await this.getBirths();
                 break;
             case types[1]:
-                data = await this.getEvents();
+                events = await this.getEvents();
                 break;
             case types[2]:
-                data = await this.getHolidays();
+                events = await this.getHolidays();
                 break;
        }
 
-       const events = data[type];
        const randomEventIndex = getRandomNumberInRange(0, events.length);
        const event = events[randomEventIndex];
        return {
